@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adega Blend House</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f8f8f8;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      margin: 15px;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 100%;
+    }
+
+    button {
+      background: #4a0e0e;
+      color: white;
+      cursor: pointer;
+      border: none;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #700000;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+
+    th {
+      background: #eee;
+    }
+
+    .delete-btn {
+      background: red;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #login {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #app {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="login" class="card">
+    <h2>🍷 Login - Adega Blend House</h2>
+    <input type="text" id="username" placeholder="Usuário">
+    <input type="password" id="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+  </div>
+
+  <!-- APLICATIVO ADEGA -->
+  <div id="app">
+    <header style="background:#4a0e0e; color:white; text-align:center; padding:15px; font-size:22px;">
+      🍷 Adega Blend House
+      <div id="usuarioLogado" style="font-size:16px; margin-top:5px;"></div>
+    </header>
+    <main style="padding:15px;">
+
+      <!-- ESTOQUE -->
+      <section class="card">
+        <h2>📦 Estoque</h2>
+        <input type="text" id="nomeProduto" placeholder="Nome do produto">
+        <input type="number" id="quantidadeProduto" placeholder="Quantidade">
+        <input type="number" id="precoProduto" placeholder="Preço (R$)">
+        <select id="unidadeProduto">
+          <option value="copo">Copo</option>
+          <option value="lata">Lata</option>
+          <option value="litro">Litro</option>
+        </select>
+        <button onclick="adicionarProduto()">Adicionar Produto</button>
+
+        <table id="tabelaEstoque">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Qtd</th>
+              <th>Preço</th>
+              <th>Unidade</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- VENDAS -->
+      <section class="card">
+        <h2>🛒 Vendas</h2>
+        <select id="produtoVenda"></select>
+        <input type="number" id="quantidadeVenda" placeholder="Quantidade vendida">
+        <button onclick="registrarVenda()">Registrar Venda</button>
+
+        <table id="tabelaVendas">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Qtd</th>
+              <th>Unidade</th>
+              <th>Total</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- RELATÓRIO -->
+      <section class="card">
+        <h2>💰 Relatório Financeiro</h2>
+        <p>Total faturado: <strong id="totalFaturado">R$ 0,00</strong></p>
+        <button onclick="logout()" style="background:red; margin-top:10px;">Sair</button>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ---------- CONTROLE DE ACESSO ----------
+    const validUsers = ["gabriel", "joao"];
+    const validPassword = "adega123";
+
+    function login() {
+      const username = document.getElementById("username").value.toLowerCase();
+      const password = document.getElementById("password").value;
+
+      if(validUsers.includes(username) && password === validPassword) {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        document.getElementById("usuarioLogado").textContent = "Olá, " + username;
+      } else {
+        alert("Usuário ou senha incorretos!");
+      }
+    }
+
+    function logout() {
+      document.getElementById("login").style.display = "block";
+      document.getElementById("app").style.display = "none";
+      document.getElementById("username").value = "";
+      document.getElementById("password").value = "";
+    }
+
+    // ---------- SISTEMA ADEGA ----------
+    let estoque = [];
+    let vendas = [];
+    let totalFaturado = 0;
+
+    function atualizarSelectProdutos() {
+      const select = document.getElementById("produtoVenda");
+      select.innerHTML = "";
+      estoque.forEach((p, i) => {
+        let option = document.createElement("option");
+        option.value = i;
+        option.textContent = `${p.nome} - ${p.unidade} (Qtd: ${p.quantidade})`;
+        select.appendChild(option);
+      });
+    }
+
+    function atualizarTabelaEstoque() {
+      const tbody = document.querySelector("#tabelaEstoque tbody");
+      tbody.innerHTML = "";
+      estoque.forEach((p, i) => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.nome}</td>
+          <td>${p.quantidade}</td>
+          <td>R$ ${p.preco.toFixed(2)}</td>
+          <td>${p.unidade}</td>
+          <td><button class="delete-btn" onclick="excluirProduto(${i})">Excluir</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      atualizarSelectProdutos();
+    }
+
+    function atualizarTabelaVendas() {
+      const tbody = document.querySelector("#tabelaVendas tbody");
+      tbody.innerHTML = "";
+      vendas.forEach((v, i) => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${v.nome}</td>
+          <td>${v.quantidade}</td>
+          <td>${v.unidade}</td>
+          <td>R$ ${v.total.toFixed(2)}</td>
+          <td><button class="delete-btn" onclick="excluirVenda(${i})">Excluir</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function adicionarProduto() {
+      const nome = document.getElementById("nomeProduto").value;
+      const qtd = parseInt(document.getElementById("quantidadeProduto").value);
+      const preco = parseFloat(document.getElementById("precoProduto").value);
+      const unidade = document.getElementById("unidadeProduto").value;
+
+      if(!nome || !qtd || !preco) return alert("Preencha todos os campos!");
+      estoque.push({ nome, quantidade: qtd, preco, unidade });
+      atualizarTabelaEstoque();
+      document.getElementById("nomeProduto").value = "";
+      document.getElementById("quantidadeProduto").value = "";
+      document.getElementById("precoProduto").value = "";
+    }
+
+    function excluirProduto(index) {
+      estoque.splice(index, 1);
+      atualizarTabelaEstoque();
+    }
+
+    function registrarVenda() {
+      const produtoIndex = document.getElementById("produtoVenda").value;
+      const qtd = parseInt(document.getElementById("quantidadeVenda").value);
+      if(produtoIndex === "" || !qtd) return alert("Preencha todos os campos!");
+      let produto = estoque[produtoIndex];
+      if(produto.quantidade < qtd) return alert("Estoque insuficiente!");
+      produto.quantidade -= qtd;
+      let total = produto.preco * qtd;
+      totalFaturado += total;
+      vendas.push({ nome: produto.nome, quantidade: qtd, unidade: produto.unidade, total });
+      atualizarTabelaEstoque();
+      atualizarTabelaVendas();
+      document.getElementById("totalFaturado").textContent = "R$ " + totalFaturado.toFixed(2);
+      document.getElementById("quantidadeVenda").value = "";
+    }
+
+    function excluirVenda(index) {
+      let venda = vendas[index];
+      totalFaturado -= venda.total;
+      let produto = estoque.find(p => p.nome === venda.nome && p.unidade === venda.unidade);
+      if(produto) produto.quantidade += venda.quantidade;
+      vendas.splice(index, 1);
+      atualizarTabelaEstoque();
+      atualizarTabelaVendas();
+      document.getElementById("totalFaturado").textContent = "R$ " + totalFaturado.toFixed(2);
+    }
+  </script>
+</body>
+</html>
